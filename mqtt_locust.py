@@ -64,28 +64,14 @@ class MQTTClient(mqtt.Client):
         self.submmap = {}
         self.defaultQoS = 0
 
-    def tls_set(self, ca_certs, certfile=None, keyfile=None, cert_reqs=ssl.CERT_REQUIRED, 
-            tls_version=ssl.PROTOCOL_TLSv1_2, ciphers=None):
-        start_time = time.time()
-        try:
-            super(MQTTClient,self).tls_set(ca_certs,
-            certfile,
-                keyfile,
-                cert_reqs, 
-                tls_version,
-                ciphers)
-        except Exception as e:
-            fire_locust_failure(
-                request_type=REQUEST_TYPE,
-                name='tls_set',
-                response_time=time_delta(start_time, time.time()),
-                exception=e)
 
     #retry is not used at the time since this implementation only supports QoS 0
     def publish(self, topic, payload=None, qos=0, retry=5, name='publish', **kwargs):
+        #print ("publishing")
         timeout = kwargs.pop('timeout', 10000)
         start_time = time.time()
         try:
+          super(MQTTClient, self).loop()
           res = super(MQTTClient, self).publish(
                     topic,
                     payload=payload,
@@ -94,7 +80,6 @@ class MQTTClient(mqtt.Client):
                 )
           [ err, mid ] = res
           if err:
-            print ("publish")
             print (res)
             super(MQTTClient, self).enable_logger()
             fire_locust_failure(
@@ -145,12 +130,23 @@ class MQTTClient(mqtt.Client):
         
 
     def locust_on_connect(self, client, flags_dict, userdata, rc):
-        print("Connection returned result: "+mqtt.connack_string(rc))        
-        fire_locust_success(
+        print("locust_on_connect")
+        print(mqtt.connack_string(rc))        
+        try:
+          fire_locust_success(
             request_type=REQUEST_TYPE,
             name='connect',
             response_time=0,
             response_length=0
+            )
+        except Exception as e:
+          print("Connection broken")
+          print(e)
+          fire_locust_failure(
+            request_type=REQUEST_TYPE,
+            name='connect',
+            response_time=0,
+            exception=e
             )
         
     
@@ -228,6 +224,7 @@ class MQTTClient(mqtt.Client):
         
 
     def locust_on_disconnect(self, client, userdata, rc):
+        print("locust_on_disconnect")
         fire_locust_failure(
             request_type=REQUEST_TYPE,
             name='disconnect',
@@ -261,8 +258,10 @@ class MQTTLocust(Locust):
           #self.client.tls_set(self.ca_cert, self.iot_cert, self.iot_private_key, tls_version=ssl.PROTOCOL_TLSv1_2)
           #It is important to do an asynchronous connect, given that we will have
           #multiple connections happening in a single server during a Locust test
+          #self.client.connect(host=host, port=port)
           self.client.connect_async(host=host, port=port)
           self.client.loop_start()
+          print("trying to connect")
         except Exception as e:
             fire_locust_failure(
                 request_type=REQUEST_TYPE,
