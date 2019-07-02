@@ -56,7 +56,6 @@ class ThingBehavior(TaskSet):
         #allow for the connection to be established before doing anything (publishing or subscribing) to the MQTT topic
         time.sleep(5)
 
-    # @task(5)
     def device_creation(self):
         self.devices_available = self.devices_available + create_devices(auth_header,
                                  secure,
@@ -66,7 +65,6 @@ class ThingBehavior(TaskSet):
                                  number_of_devices,
                                  prefix)
 
-    # @task(50)
     @task
     def publish(self):
         #print ("publish task called")
