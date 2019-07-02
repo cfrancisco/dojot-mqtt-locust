@@ -30,7 +30,11 @@ def create_template(auth_header, secure, host, prefix='no-prefix'):
     else:
         url = 'http://{}:8000/template'.format(host)
     data = {"label": "{}".format(prefix),
-            "attrs" : [{"label": "temperature",
+            "attrs" : [{"label": "protocol",
+                        "type": "static",
+                        "value_type": "string",
+                        "static_value":"mqtt"},
+                        {"label": "temperature",
                         "type": "dynamic",
                         "value_type": "float"}, 
                         {"label" : "gps",
