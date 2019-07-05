@@ -253,6 +253,7 @@ class MQTTLocust(Locust):
             [host, port] = self.host.split(":")
         except:
             host, port = self.host, 1883
+        port = int(port)
 
         try:
           #self.client.tls_set(self.ca_cert, self.iot_cert, self.iot_private_key, tls_version=ssl.PROTOCOL_TLSv1_2)

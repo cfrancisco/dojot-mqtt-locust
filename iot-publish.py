@@ -21,7 +21,7 @@ logger.setLevel(logging.DEBUG)
 
 # default data
 data = dict()
-data['host'] = "iotmid-docker.cpqd.com.br"
+data['host'] = "localhost"
 data['mqtt_port'] = "1883"
 
 #topic
@@ -123,7 +123,9 @@ class MyThing(MQTTLocust):
 
     #updateLimits()
 
-    getParms()
+    # Isn't possible uses -H and slave/master schema in the same
+    # time. Thus, for now, the host and port were hard coded
+    #getParms()
 
     createTemplate()
 
