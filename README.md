@@ -6,7 +6,7 @@ Project based on mqtt-locust (https://github.com/concurrencylabs/mqtt-locust)
 For more details, read this article: https://www.concurrencylabs.com/blog/hatch-a-swarm-of-things-using-locust-and-ec2/
 
 
-#Installation
+# Installation
 
 ```shell
 virtualenv mqtt-locust
@@ -36,12 +36,12 @@ And then run on each slave machine:
    locust -f iot-publish.py --slave --master-host=localhost
 ```
 
-#Dockerfile
+# Dockerfile
 
 Under development
 
 
-#Changing System File Limitations
+# Changing System File Limitations
 
 Basically you edit /etc/security/limits.conf and put in:
 
