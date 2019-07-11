@@ -63,15 +63,21 @@ class MQTTClient(mqtt.Client):
         self.pubmmap = {}
         self.submmap = {}
         self.defaultQoS = 0
+        self.is_connected = False
 
+    def disconnecting(self):
+        print ("Disconnecting")
+        super(MQTTClient, self).disconnect() # disconnect gracefully
+        super(MQTTClient, self).loop_stop() # stops network loop
+        self.is_connected = False
 
     #retry is not used at the time since this implementation only supports QoS 0
     def publish(self, topic, payload=None, qos=0, retry=5, name='publish', **kwargs):
-        #print ("publishing")
+        #print ("publishing", self.is_connected)
         timeout = kwargs.pop('timeout', 10000)
         start_time = time.time()
         try:
-          super(MQTTClient, self).loop()
+          #super(MQTTClient, self).loop_start()
           res = super(MQTTClient, self).publish(
                     topic,
                     payload=payload,
@@ -130,8 +136,9 @@ class MQTTClient(mqtt.Client):
         
 
     def locust_on_connect(self, client, flags_dict, userdata, rc):
-        print("locust_on_connect")
         print(mqtt.connack_string(rc))        
+        if rc == 0:
+            self.is_connected = True
         try:
           fire_locust_success(
             request_type=REQUEST_TYPE,
@@ -224,22 +231,43 @@ class MQTTClient(mqtt.Client):
         
 
     def locust_on_disconnect(self, client, userdata, rc):
-        print("locust_on_disconnect")
+        print("locust_on_disconnect, RC: ", rc)
+        self.is_connected = False
         fire_locust_failure(
             request_type=REQUEST_TYPE,
             name='disconnect',
             response_time=0,
             exception=DisconnectError("disconnected"),
         )
-        self.reconnect()
+        super(MQTTClient, self).loop_stop() # stops network loop
+        #client.loop_stop()
+        #self.reconnect()
 
+    def connecting(self):
+        print("Connecting")
+        start_time = time.time()
+        try:
+          #self.client.tls_set(self.ca_cert, self.iot_cert, self.iot_private_key, tls_version=ssl.PROTOCOL_TLSv1_2)
+          #It is important to do an asynchronous connect, given that we will have
+          #multiple connections happening in a single server during a Locust test
+          #self.client.connect(host=host, port=port)
+          #self.client.connect_async(host=self.host, port=self.port)
+          super(MQTTClient, self).connect_async(host=self.host, port=self.port)
+          #self.client.loop_start()
+          super(MQTTClient, self).loop_start() # stops network loop
+        except Exception as e:
+            fire_locust_failure(
+                request_type=REQUEST_TYPE,
+                name='connect',
+                response_time=time_delta(start_time, time.time()),
+                exception=ConnectError("Could not connect to host:["+self.host+"]")
+            )
 
 class MQTTLocust(Locust):
 
     def __init__(self, *args, **kwargs):
         print("initializing MQTTLocust")
         super(Locust, self).__init__(*args, **kwargs)
-        start_time = time.time()
         if self.host is None:
             raise LocustError("You must specify a host")
 
@@ -248,27 +276,15 @@ class MQTTLocust(Locust):
         #		Ideally we want to control the client_id that is set in Paho. Each client_id
         #		should match a thing_id in the AWS IoT Thing Registry
         #self.client = MQTTClient(self.client_id)
-        self.client = MQTTClient()
+        self.client_id = "{0}-{1}-{2}".format("locust", random.randint(1,111233),random.randint(1,111233))
+        self.client = MQTTClient(self.client_id)
+        self.client.client_id = self.client_id
         try:
             [host, port] = self.host.split(":")
         except:
             host, port = self.host, 1883
         port = int(port)
 
-        try:
-          #self.client.tls_set(self.ca_cert, self.iot_cert, self.iot_private_key, tls_version=ssl.PROTOCOL_TLSv1_2)
-          #It is important to do an asynchronous connect, given that we will have
-          #multiple connections happening in a single server during a Locust test
-          #self.client.connect(host=host, port=port)
-          self.client.connect_async(host=host, port=port)
-          self.client.loop_start()
-          print("trying to connect")
-        except Exception as e:
-            fire_locust_failure(
-                request_type=REQUEST_TYPE,
-                name='connect',
-                response_time=time_delta(start_time, time.time()),
-                exception=ConnectError("Could not connect to host:["+host+"]")
-            )
-          
-          
+        self.client.host = host
+        self.client.port = port 
+        

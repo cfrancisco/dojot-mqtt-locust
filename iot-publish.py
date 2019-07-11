@@ -37,52 +37,68 @@ prefix = 'locust'
 
 
 
-class ThingBehavior(TaskSet):
+class IotDevice(TaskSet):
+
     def on_start(self):
+        print ("------------")
+        print ("Creating Device ")
         # do login
         auth_header = do_login(secure, data['host'], user, password)
         # create devices
         self.devices_available = []
-        aux_prefix = "{0}-{1}".format(prefix, random.randint(1,1001))
+        aux_prefix = self.client.client_id 
         self.devices_available = create_devices(auth_header,
-                                 data['template_id'],
-                                 secure,
-                                 data['host'],
-                                 user,
-                                 password,
-                                 number_of_devices,
-                                 aux_prefix)
+                                data['template_id'],
+                                secure,
+                                data['host'],
+                                user,
+                                password,
+                                number_of_devices,
+                                aux_prefix)
+        time.sleep(3)
+            
 
-        #allow for the connection to be established before doing anything (publishing or subscribing) to the MQTT topic
-        time.sleep(5)
-
-    def device_creation(self):
-        self.devices_available = self.devices_available + create_devices(auth_header,
-                                 secure,
-                                 gw,
-                                 user,
-                                 password,
-                                 number_of_devices,
-                                 prefix)
+    def on_stop(self):
+        if self.client.is_connected:
+            print ("Client is connected so let's disconnect the tasks")
+            self.client.disconnecting()
+        pass
 
     @task
-    def publish(self):
-        #print ("publish task called")
-        #device_id = random.choice(self.devices_available)
-        device_id = self.devices_available[0]
-        topic = "/{0}/{1}/attrs".format(tenant, device_id)
-        self.client.publish(
-            payload=self.payload(),
-            qos=0,
-            topic=topic,
-            name=topic,
-            timeout=publish_timeout)
+    class SubDevice(TaskSet):
 
-    def payload(self):
-        payload = {
-           'temperature': random.randrange(0,10,1) #set temperature between 0 and 10
-           } 
-        return json.dumps(payload)
+        def on_start(self):
+            print ("------------")
+            print("Starting SubTask....")
+            self.client.connecting()
+            time.sleep(4)
+            print ("------------")
+            #allow for the connection to be established before doing anything (publishing or subscribing) to the MQTT topic
+            
+        @task
+        def publish(self):
+            #print ("publish task called")
+            #device_id = random.choice(self.devices_available)
+            device_id = self.parent.devices_available[0]
+            topic = "/{0}/{1}/attrs".format(tenant, device_id)
+            if not self.client.is_connected:
+                print ("publishing", self.client.is_connected)
+                self.interrupt()
+                return ''
+            else:
+                self.client.publish(
+                    topic=topic,
+                    payload=self.payload(),
+                    qos=0,
+                    name=topic,
+                    timeout=publish_timeout)
+            pass
+            
+        def payload(self):
+            payload = {
+            'temperature': random.randrange(0,10,1) #set temperature between 0 and 10
+            } 
+            return json.dumps(payload)
 
 
 """
@@ -124,11 +140,11 @@ class MyThing(MQTTLocust):
     #updateLimits()
 
     # Isn't possible uses -H and slave/master schema in the same
-    # time. Thus, for now, the host and port were hard coded
+    # time. Thus, for now, the host and port were hard coded.
     #getParms()
 
     createTemplate()
 
-    task_set = ThingBehavior
-    min_wait = 3
-    max_wait = 10
+    task_set = IotDevice
+    min_wait = 10
+    max_wait = 100
