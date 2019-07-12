@@ -20,13 +20,16 @@ logger.setLevel(logging.DEBUG)
 
 # default data
 data = dict()
-#data['mqtt_host'] = "iotmid-docker.cpqd.com.br"
-#data['mqtt_port'] = "1883"
 
 data['dojot_host'] = "10.50.11.155"
 data['dojot_port'] = "30001"
 data['mqtt_host'] = "10.50.11.160"
 data['mqtt_port'] = "30002"
+data['dojot_host'] = "iotmid-docker.cpqd.com.br"
+data['dojot_port'] = "8000"
+data['mqtt_host'] = "iotmid-docker.cpqd.com.br"
+data['mqtt_port'] = "1883"
+
 
 #topic
 tenant = "admin"
