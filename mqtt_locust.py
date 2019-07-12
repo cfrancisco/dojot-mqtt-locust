@@ -71,13 +71,24 @@ class MQTTClient(mqtt.Client):
         super(MQTTClient, self).loop_stop() # stops network loop
         self.is_connected = False
 
-    #retry is not used at the time since this implementation only supports QoS 0
+    def reconnecting(self):
+        print ("Reconnecting")
+        start_time = time.time()
+        super(MQTTClient, self).connect_async(host=self.host, port=self.port, keepalive=600)
+        super(MQTTClient, self).loop_start() 
+        fire_locust_failure(
+            request_type=REQUEST_TYPE,
+            name="reconnecting",
+            response_time=time_delta(start_time, time.time()),
+            exception=DisconnectError("Connection lost.")
+        )
+
+
     def publish(self, topic, payload=None, qos=0, retry=5, name='publish', **kwargs):
         #print ("publishing", self.is_connected)
         timeout = kwargs.pop('timeout', 10000)
         start_time = time.time()
         try:
-          #super(MQTTClient, self).loop_start()
           res = super(MQTTClient, self).publish(
                     topic,
                     payload=payload,
@@ -86,8 +97,6 @@ class MQTTClient(mqtt.Client):
                 )
           [ err, mid ] = res
           if err:
-            print (res)
-            super(MQTTClient, self).enable_logger()
             fire_locust_failure(
                     request_type=REQUEST_TYPE,
                     name=name,
@@ -108,6 +117,7 @@ class MQTTClient(mqtt.Client):
                     exception=e,
                 )
           print (str(e))
+
 
     #retry is not used at the time since this implementation only supports QoS 0
     def subscribe(self, topic, qos=0, retry=5, name='subscribe', timeout=15000):
@@ -134,6 +144,7 @@ class MQTTClient(mqtt.Client):
           )
           print ("Exception when subscribing to topic:["+str(e)+"]")
         
+
 
     def locust_on_connect(self, client, flags_dict, userdata, rc):
         print(mqtt.connack_string(rc))        
@@ -232,16 +243,21 @@ class MQTTClient(mqtt.Client):
 
     def locust_on_disconnect(self, client, userdata, rc):
         print("locust_on_disconnect, RC: ", rc)
-        self.is_connected = False
+        if (self.is_connected):
+            self.is_connected = False
+            #super(MQTTClient, self).loop_stop() # stops network loop
+            #super(MQTTClient, self).disconnect() # stops network loop
+            client.loop_stop()
+            client.disconnect()
+        
         fire_locust_failure(
             request_type=REQUEST_TYPE,
             name='disconnect',
             response_time=0,
             exception=DisconnectError("disconnected"),
         )
-        super(MQTTClient, self).loop_stop() # stops network loop
-        #client.loop_stop()
         #self.reconnect()
+
 
     def connecting(self):
         print("Connecting")
@@ -250,11 +266,8 @@ class MQTTClient(mqtt.Client):
           #self.client.tls_set(self.ca_cert, self.iot_cert, self.iot_private_key, tls_version=ssl.PROTOCOL_TLSv1_2)
           #It is important to do an asynchronous connect, given that we will have
           #multiple connections happening in a single server during a Locust test
-          #self.client.connect(host=host, port=port)
-          #self.client.connect_async(host=self.host, port=self.port)
-          super(MQTTClient, self).connect_async(host=self.host, port=self.port)
-          #self.client.loop_start()
-          super(MQTTClient, self).loop_start() # stops network loop
+          super(MQTTClient, self).connect_async(host=self.host, port=self.port, keepalive=600)
+          super(MQTTClient, self).loop_start() 
         except Exception as e:
             fire_locust_failure(
                 request_type=REQUEST_TYPE,
@@ -275,16 +288,15 @@ class MQTTLocust(Locust):
         #      which Paho handles by creating a random client_id. 
         #		Ideally we want to control the client_id that is set in Paho. Each client_id
         #		should match a thing_id in the AWS IoT Thing Registry
-        #self.client = MQTTClient(self.client_id)
         self.client_id = "{0}-{1}-{2}".format("locust", random.randint(1,111233),random.randint(1,111233))
         self.client = MQTTClient(self.client_id)
-        self.client.client_id = self.client_id
         try:
             [host, port] = self.host.split(":")
         except:
             host, port = self.host, 1883
         port = int(port)
-
+        # set data
+        self.client.client_id = self.client_id
         self.client.host = host
         self.client.port = port 
         

@@ -133,5 +133,5 @@ ENV PYTHONPATH="/usr/src/app"
 COPY . /usr/src/app
 RUN pip install -r requirements.txt
 
-EXPOSE 8089
+#EXPOSE 8089
 #CMD ["locust", "-f iot-publish.py -H localhost:1883"]

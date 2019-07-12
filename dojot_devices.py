@@ -5,16 +5,16 @@ import uuid
 
 logger = logging.getLogger('dojot.devices')
 
-def do_login(secure, host, user, password):
+def do_login(secure, host, user, password, port=8000):
     # Get JWT token
     if secure:
         url = 'https://{}/auth'.format(host)
     else:
-        url = 'http://{}:8000/auth'.format(host)
+        url = 'http://{0}:{1}/auth'.format(host,port)
     data = {"username" : "{}".format(user), "passwd" : "{}".format(password)}
     response = requests.post(url=url, json=data)
     token = response.json()['jwt']
-    logger.info("Logged: {}".format(token))
+    logger.info("Successfully logged in Dojot.")
     if response.status_code != 200:
         print (str(response))
         raise Exception("HTTP POST failed {}.".
@@ -23,12 +23,12 @@ def do_login(secure, host, user, password):
     return auth_header
 
 
-def create_template(auth_header, secure, host, prefix='no-prefix'):
+def create_template(auth_header, secure, host, prefix='no-prefix', port=8000):
     # Create Template
     if secure:
         url = 'https://{}/template'.format(host)
     else:
-        url = 'http://{}:8000/template'.format(host)
+        url = 'http://{0}:{1}/template'.format(host,port)
     data = {"label": "{}".format(prefix),
             "attrs" : [{"label": "protocol",
                         "type": "static",
@@ -47,14 +47,14 @@ def create_template(auth_header, secure, host, prefix='no-prefix'):
     template_id = response.json()['template']['id']
     return template_id
 
-def create_devices(auth_header, template_id, secure, host, user, password, number_of_devices, prefix='no-prefix'):
+def create_devices(auth_header, template_id, secure, host, user, password, number_of_devices, prefix='no-prefix', port=8000):
     devices = []
 
     # Create devices
     if secure:
         url = 'https://{}/device'.format(host)
     else:
-        url = 'http://{}:8000/device'.format(host)
+        url = 'http://{0}:{1}/device'.format(host,port)
     for n in range(1,number_of_devices+1):
         data = {"templates" : ["{}".format(template_id)],
                 "label" : "{0}-{1}".format(prefix,n)}
@@ -72,7 +72,8 @@ def create_devices(auth_header, template_id, secure, host, user, password, numbe
         if secure:
             url_update = 'https://{}/device/{}'.format(host, device_id)
         else:
-            url_update = 'http://{}:8000/device/{}'.format(host, device_id)
+            url_update = 'http://{}:{}/device/{}'.format(host, port, device_id)
+ 
         # Get
         response = requests.get(url=url_update, headers=auth_header)
         if response.status_code != 200:
@@ -97,82 +98,3 @@ def create_devices(auth_header, template_id, secure, host, user, password, numbe
     logger.info("Created devices: {}".format(devices))
 
     return devices
-
-
-def remove_devices(secure, host, user, password, prefix='trackingsim'):
-    # Get JWT token
-    if secure:
-        url = 'https://{}/auth'.format(host)
-    else:
-        url = 'http://{}:8000/auth'.format(host)
-    data = {"username" : "{}".format(user), "passwd" : "{}".format(password)}
-    response = requests.post(url=url, json=data)
-    if response.status_code != 200:
-        raise Exception("HTTP POST failed {}.".
-                        format(response.status_code))
-    token = response.json()['jwt']
-    auth_header = {"Authorization": "Bearer {}".format(token)}
-
-    # Get devices
-    # TODO handle pagination
-    if secure:
-        url = 'https://{}/device?page_size=128'.format(host)
-    else:
-        url = 'http://{}:8000/device?page_size=128'.format(host)
-    response = requests.get(url=url, headers=auth_header)
-    if response.status_code != 200:
-        raise Exception("HTTP GET failed {}.".
-                        format(response.status_code))
-    all_devices = list(response.json()['devices'])
-
-    devices_to_be_removed = []
-    for dev in all_devices:
-        if dev['label'].startswith(prefix):
-            devices_to_be_removed.append(dev['id'])
-
-    # Remove devices
-    removed_devices = []
-    for dev in devices_to_be_removed:
-        if secure:
-            url = 'https://{0}/device/{1}'.format(host, dev)
-        else:
-            url = 'http://{0}:8000/device/{1}'.format(host, dev)
-        response = requests.delete(url=url, headers=auth_header)
-        if response.status_code == requests.codes.ok:
-            removed_devices.append(dev)
-        else:
-            logger.error("Failed to remove device {}".format(dev))
-
-    logger.info("Removed devices: {}".format(removed_devices))
-
-    # Get templates
-    # TODO handle pagination
-    if secure:
-        url = 'https://{}/template?page_size=1000'.format(host)
-    else:
-        url = 'http://{}:8000/template?page_size=1000'.format(host)
-    response = requests.get(url=url, headers=auth_header)
-    if response.status_code != 200:
-        raise Exception("HTTP GET failed {}.".
-                        format(response.status_code))
-    all_templates = list(response.json()['templates'])
-
-    templates_to_be_removed = []
-    for tpl in all_templates:
-        if tpl['label'].startswith(prefix):
-            templates_to_be_removed.append(tpl['id'])
-
-    # Remove templates
-    removed_templates = []
-    for tpl in templates_to_be_removed:
-        if secure:
-            url = 'https://{0}/template/{1}'.format(host, tpl)
-        else:
-            url = 'http://{0}:8000/template/{1}'.format(host, tpl)
-        response = requests.delete(url=url, headers=auth_header)
-        if response.status_code == requests.codes.ok:
-            removed_templates.append(tpl)
-        else:
-            logger.error("Failed to remove template {}".format(tpl))
-
-    logger.info("Removed templates: {}".format(removed_templates))
