@@ -20,13 +20,13 @@ logger.setLevel(logging.DEBUG)
 
 # default data
 data = dict()
-#data['host'] = "iotmid-docker.cpqd.com.br"
+#data['mqtt_host'] = "iotmid-docker.cpqd.com.br"
 #data['mqtt_port'] = "1883"
 
-data['host'] = "10.50.11.160"
-data['mqtt_port'] = "30002"
 data['dojot_host'] = "10.50.11.155"
 data['dojot_port'] = "30001"
+data['mqtt_host'] = "10.50.11.160"
+data['mqtt_port'] = "30002"
 
 #topic
 tenant = "admin"
@@ -138,7 +138,7 @@ def getParms():
     argss = sys.argv[1:]
     host = argss[argss.index("-H")+1]
     [host, mqtt_port] = host.split(":")
-    data['host'] = host
+    data['mqtt_host'] = host
     data['dojot_host'] = host
     data['mqtt_port'] = mqtt_port
     logger.info("Host: {}".format(host))
