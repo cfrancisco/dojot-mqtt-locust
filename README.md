@@ -1,5 +1,5 @@
 # dojot-mqtt-locust
-Load testing tool for dojot IoT platform using Locust.io and Paho MQTT client
+dojot-mqtt-locust is a Load testing tool for dojot IoT platform using Locust.io and Paho MQTT client
 
 Project based on mqtt-locust (https://github.com/concurrencylabs/mqtt-locust)
 
@@ -25,7 +25,7 @@ pip install -r requirements.txt
  locust -f iot-publish.py -H iotmid-docker.cpqd.com.br:1883 --no-web -c 10 -r 10
 ```
 
- If you want run distribuited as master and slave model: 
+ If you want run distribuited as master and slave schema: 
 
 Firsty, starts locust in master mode:
 ```shell
@@ -36,9 +36,23 @@ And then run on each slave machine:
    locust -f iot-publish.py --slave --master-host=localhost
 ```
 
+# Useful commands
+
+To scale containers using docker compose:
+```shell
+sudo docker-compose up -d --scale locust-slave=10
+```
+
+
 # Dockerfile
 
-Under development
+ Currently is been used a docker-compose file, but you can build manually as you want.
+
+```shell
+sudo docker build -t locust-mqtt-1 .
+sudo docker run -it -d -p 8089:8089 locust-mqtt-1
+sudo docker exec -it <CONTAINER_ID> /bin/bash -c "locust -f iot-publish.py -H <HOST>:1883 --no-web -c <N_CLIENTES> -r <RATE>"
+```
 
 
 # Changing System File Limitations
