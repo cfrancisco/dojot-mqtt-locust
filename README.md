@@ -40,13 +40,14 @@ And then run on each slave machine:
 
 To scale containers using docker compose:
 ```shell
+sudo docker build -t locust-mqtt-1 .
 sudo docker-compose up -d --scale locust-slave=10
 ```
 
 
 # Dockerfile
 
- Currently is been used a docker-compose file, but you can build manually as you want.
+ Currently is been used a docker-compose file, but you can run manually as you want.
 
 ```shell
 sudo docker build -t locust-mqtt-1 .
@@ -57,7 +58,7 @@ sudo docker exec -it <CONTAINER_ID> /bin/bash -c "locust -f iot-publish.py -H <H
 
 # Changing System File Limitations
 
-Basically you edit /etc/security/limits.conf and put in:
+Basically you edit /etc/security/limits.conf adding:
 
 * hard nofile 500000
 
@@ -69,4 +70,8 @@ fs.file-max = 500000
 sudo sysctl -p
 
 
-To check uses: ulimit -a
+In order to check the system limits:
+
+```shell
+ulimit -a
+```

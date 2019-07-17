@@ -65,6 +65,24 @@ class MQTTClient(mqtt.Client):
         self.defaultQoS = 0
         self.is_connected = False
 
+
+    def connecting(self, host, port):
+        print ("Trying to connect to MQTT broker")
+        self.start_time = time.time()
+        try:
+          #self.client.tls_set(self.ca_cert, self.iot_cert, self.iot_private_key, tls_version=ssl.PROTOCOL_TLSv1_2)
+          #It is important to do an asynchronous connect, given that we will have
+          #multiple connections happening in a single server during a Locust test
+          super(MQTTClient, self).connect_async(host=host, port=port, keepalive=600)
+          super(MQTTClient, self).loop_start() 
+        except Exception as e:
+            fire_locust_failure(
+                request_type=REQUEST_TYPE,
+                name='connect',
+                response_time=time_delta(self.start_time, time.time()),
+                exception=ConnectError("Could not connect to host:["+host+"]")
+            )
+
     def disconnecting(self):
         print ("Disconnecting")
         super(MQTTClient, self).disconnect() # disconnect gracefully
@@ -80,7 +98,7 @@ class MQTTClient(mqtt.Client):
             request_type=REQUEST_TYPE,
             name="reconnecting",
             response_time=time_delta(start_time, time.time()),
-            exception=DisconnectError("Connection lost.")
+            exception=DisconnectError("Connection is down. Trying to reconnect.")
         )
 
 
@@ -145,8 +163,36 @@ class MQTTClient(mqtt.Client):
           print ("Exception when subscribing to topic:["+str(e)+"]")
         
 
+    def connection_time(self,initial, final):
+        delta = time_delta(initial,final)
+        print delta
+        name = ""
+        if (delta >= 0 and delta < 10 ):
+            name="1. Connection time: between 0 and 10 ms"
+        if (delta >= 10 and delta < 100 ):
+            name="2. Connection time: between 10 and 100 ms"
+        if (delta >= 100 and delta < 1000 ):
+            name="3. Connection time: between 100 and 1000 ms"
+        if (delta >= 1000 and delta < 3000 ):
+            name="4. Connection time: between 1 and 3 s"
+        if (delta >= 3000 and delta < 8000 ):
+            name="5. Connection time: between 3 and 8 s"
+        if (delta >= 8000 and delta < 15000 ):
+            name="6. Connection time: between 8 and 15 s"
+        if (delta >= 15000):
+            name="7. Connection time: higher then 15 s"
 
+        fire_locust_success(
+            request_type=REQUEST_TYPE,
+            name=name,
+            response_time=delta,
+            response_length=0,
+            )
+     
+        pass
+        
     def locust_on_connect(self, client, flags_dict, userdata, rc):
+        connection_time = time.time()
         print(mqtt.connack_string(rc))        
         if rc == 0:
             self.is_connected = True
@@ -157,6 +203,7 @@ class MQTTClient(mqtt.Client):
             response_time=0,
             response_length=0
             )
+          self.connection_time(self.start_time, connection_time)
         except Exception as e:
           print("Connection broken")
           print(e)
@@ -259,22 +306,6 @@ class MQTTClient(mqtt.Client):
         #self.reconnect()
 
 
-    def connecting(self):
-        print("Connecting")
-        start_time = time.time()
-        try:
-          #self.client.tls_set(self.ca_cert, self.iot_cert, self.iot_private_key, tls_version=ssl.PROTOCOL_TLSv1_2)
-          #It is important to do an asynchronous connect, given that we will have
-          #multiple connections happening in a single server during a Locust test
-          super(MQTTClient, self).connect_async(host=self.host, port=self.port, keepalive=600)
-          super(MQTTClient, self).loop_start() 
-        except Exception as e:
-            fire_locust_failure(
-                request_type=REQUEST_TYPE,
-                name='connect',
-                response_time=time_delta(start_time, time.time()),
-                exception=ConnectError("Could not connect to host:["+self.host+"]")
-            )
 
 class MQTTLocust(Locust):
 

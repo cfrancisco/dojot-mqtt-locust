@@ -25,10 +25,15 @@ data['dojot_host'] = "10.50.11.155"
 data['dojot_port'] = "30001"
 data['mqtt_host'] = "10.50.11.160"
 data['mqtt_port'] = "30002"
-data['dojot_host'] = "iotmid-docker.cpqd.com.br"
+
+data['dojot_host'] = "10.4.2.28"
 data['dojot_port'] = "8000"
-data['mqtt_host'] = "iotmid-docker.cpqd.com.br"
+data['mqtt_host'] = "10.4.2.28"
 data['mqtt_port'] = "1883"
+
+#data['mqtt_host'] = "10.202.70.99"
+#data['mqtt_port'] = "1883"
+
 
 
 #topic
@@ -77,12 +82,22 @@ class IotDevice(TaskSet):
     @task
     class SubDevice(TaskSet):
 
+        def loop_until_connected(self):
+            #print("Starting loop.")
+            attempts = 0
+            while (attempts < 15):
+              if (not self.client.is_connected):
+                time.sleep(1)
+                attempts+=1
+              else:
+                break
+            print("Finished loop with {} attempts.".format(attempts))
+
+
         def on_start(self):
             print("Starting SubTask....")
-            print ("Trying to connect to MQTT broker")
-            self.client.connecting()
-            time.sleep(5)
-            #allow for the connection to be established before doing anything (publishing or subscribing) to the MQTT topic
+            self.client.connecting(host = data['mqtt_host'], port =  data['mqtt_port'])
+            self.loop_until_connected()
             
         @task
         def publish(self):
@@ -90,7 +105,7 @@ class IotDevice(TaskSet):
             if not self.client.is_connected:
                 print ("Connection state to publish: ", self.client.is_connected)
                 self.client.reconnecting()
-                time.sleep(5)
+                self.loop_until_connected()
                 #self.interrupt()
                 return False
             return True
@@ -116,16 +131,6 @@ class IotDevice(TaskSet):
    that we define in the GUI. Each instance of MyThing represents a device that will connect to IoT Middleware.
 """
 
-
-def updateLimits():
-    logger.info("Setting new limits to files.")
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    print (soft, hard)
-    # setting new limits
-    resource.setrlimit(resource.RLIMIT_NOFILE, (1048576, 1048576))
-    soft, hard = resource.getrlimit(resource.RLIMIT_NOFILE)
-    print (soft, hard)
-
 def createTemplate():
     logger.info("Creating template.")
     # do login
@@ -149,8 +154,6 @@ def getParms():
 class MyThing(MQTTLocust):
     logger.info("Running!")
 
-    #updateLimits()
-
     # Isn't possible uses -H and slave/master schema in the same
     # time. Thus, for now, the host and port were hard coded.
     #getParms()
@@ -158,5 +161,5 @@ class MyThing(MQTTLocust):
     createTemplate()
 
     task_set = IotDevice
-    min_wait = 10
-    max_wait = 100
+    min_wait = 10000 # 10 segs
+    max_wait = 50000 # 50 segs
