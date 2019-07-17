@@ -47,7 +47,7 @@ def create_template(auth_header, secure, host, prefix='no-prefix', port=8000):
     template_id = response.json()['template']['id']
     return template_id
 
-def create_devices(auth_header, template_id, secure, host, user, password, number_of_devices, prefix='no-prefix', port=8000):
+def create_devices(auth_header, template_id, secure, host, number_of_devices, prefix='no-prefix', port=8000):
     devices = []
 
     # Create devices
@@ -98,3 +98,51 @@ def create_devices(auth_header, template_id, secure, host, user, password, numbe
     logger.info("Created devices: {}".format(devices))
 
     return devices
+
+
+
+def create_template_and_device(auth_header, secure, host, prefix='no-prefix', port=8000):
+    # Create Template
+    if secure:
+        url = 'https://{}/template'.format(host)
+    else:
+        url = 'http://{0}:{1}/template'.format(host,port)
+    data = {"label": "{}".format(prefix),
+            "attrs" : [{"label": "protocol",
+                        "type": "static",
+                        "value_type": "string",
+                        "static_value":"mqtt"},
+                        {"label": "temperature",
+                        "type": "dynamic",
+                        "value_type": "float"}, 
+                        {"label" : "gps",
+                        "type" : "dynamic",
+                        "value_type" : "geo:point"}]}
+    response = requests.post(url=url, headers=auth_header, json=data)
+    if response.status_code != 200:
+        raise Exception("HTTP POST failed {}.".
+                        format(response.status_code))
+    template_id = response.json()['template']['id']
+    logger.info("Created Template: {}".format(template_id))
+
+    # Create devices
+    if secure:
+        url = 'https://{}/device'.format(host)
+    else:
+        url = 'http://{0}:{1}/device'.format(host,port)
+    data = {"templates" : ["{}".format(template_id)],
+            "label" : "{0}-{1}".format(prefix,1)}
+    response = requests.post(url=url, headers=auth_header, json=data)
+    if response.status_code != 200:
+        raise Exception("HTTP POST failed {}.".
+                        format(response.status_code))
+    device_id = response.json()['devices'][0]['id']
+    if response.status_code != 200:
+        raise Exception("HTTP POST failed {}.".
+                        format(response.status_code))
+
+    logger.info("Created device: {}".format(device_id))
+
+    return device_id
+
+

@@ -89,10 +89,10 @@ class MQTTClient(mqtt.Client):
         super(MQTTClient, self).loop_stop() # stops network loop
         self.is_connected = False
 
-    def reconnecting(self):
+    def reconnecting(self,host, port):
         print ("Reconnecting")
         start_time = time.time()
-        super(MQTTClient, self).connect_async(host=self.host, port=self.port, keepalive=600)
+        super(MQTTClient, self).connect_async(host=host, port=port, keepalive=600)
         super(MQTTClient, self).loop_start() 
         fire_locust_failure(
             request_type=REQUEST_TYPE,
@@ -165,7 +165,6 @@ class MQTTClient(mqtt.Client):
 
     def connection_time(self,initial, final):
         delta = time_delta(initial,final)
-        print delta
         name = ""
         if (delta >= 0 and delta < 10 ):
             name="1. Connection time: between 0 and 10 ms"
@@ -191,6 +190,17 @@ class MQTTClient(mqtt.Client):
      
         pass
         
+
+    def warning_timeout(self):
+        print("Warning: More than 15 seconds to connect.")        
+        fire_locust_failure(
+            request_type=REQUEST_TYPE,
+            name='Warning: More than 15 seconds to connect.',
+            response_time=0,
+            exception=None
+        )
+
+
     def locust_on_connect(self, client, flags_dict, userdata, rc):
         connection_time = time.time()
         print(mqtt.connack_string(rc))        
@@ -312,8 +322,6 @@ class MQTTLocust(Locust):
     def __init__(self, *args, **kwargs):
         print("initializing MQTTLocust")
         super(Locust, self).__init__(*args, **kwargs)
-        if self.host is None:
-            raise LocustError("You must specify a host")
 
         #TODO: Current implementation sets an empty client_id when the connection is initialized,
         #      which Paho handles by creating a random client_id. 
@@ -321,13 +329,14 @@ class MQTTLocust(Locust):
         #		should match a thing_id in the AWS IoT Thing Registry
         self.client_id = "{0}-{1}-{2}".format("locust", random.randint(1,111233),random.randint(1,111233))
         self.client = MQTTClient(self.client_id)
-        try:
-            [host, port] = self.host.split(":")
-        except:
-            host, port = self.host, 1883
-        port = int(port)
-        # set data
-        self.client.client_id = self.client_id
-        self.client.host = host
-        self.client.port = port 
+
+        # try:
+        #     [host, port] = self.host.split(":")
+        # except:
+        #     host, port = self.host, 1883
+        # port = int(port)
+        # # set data
+        # self.client.client_id = self.client_id
+        # self.client.host = host
+        # self.client.port = port 
         
