@@ -26,10 +26,10 @@ data['dojot_port'] = "30001"
 data['mqtt_host'] = "10.50.11.160"
 data['mqtt_port'] = "30002"
 
-data['dojot_host'] = "10.4.2.28"
-data['dojot_port'] = "8000"
-data['mqtt_host'] = "10.4.2.28"
-data['mqtt_port'] = "1883"
+#data['dojot_host'] = "10.4.2.28"
+#data['dojot_port'] = "8000"
+#data['mqtt_host'] = "10.4.2.28"
+#data['mqtt_port'] = "1883"
 
 #data['mqtt_host'] = "10.202.70.99"
 #data['mqtt_port'] = "1883"
@@ -98,7 +98,7 @@ class IotDevice(TaskSet):
 
         @task
         def publish(self):
-            print ("publish task called")
+            #print ("publish task called")
             if not self.client.is_connected:
                 print ("Connection is down. ")
                 self.client.reconnecting(host = data['mqtt_host'], port =  data['mqtt_port'])
