@@ -26,6 +26,10 @@ data['dojot_port'] = "30001"
 data['mqtt_host'] = "10.50.11.160"
 data['mqtt_port'] = "30002"
 
+#Anderson
+data['mqtt_host'] = "10.202.70.18"
+data['mqtt_port'] = "1883"
+
 #data['dojot_host'] = "10.4.2.28"
 #data['dojot_port'] = "8000"
 #data['mqtt_host'] = "10.4.2.28"
@@ -80,19 +84,20 @@ class IotDevice(TaskSet):
         def loop_until_connected(self):
             #print("Starting loop.")
             attempts = 0
-            while (attempts < 15):
+            while (attempts < 30):
               if (not self.client.is_connected):
                 time.sleep(1)
                 attempts+=1
               else:
                 break
             print("Finished loop with {} attempts.".format(attempts))
-            if (attempts == 15):
+            if (attempts == 30):
                 self.client.warning_timeout()
 
         def on_start(self):
             print("Starting SubTask....")
-            self.client.connecting(host = data['mqtt_host'], port =  data['mqtt_port'])
+            self.client.connecting(host = data['mqtt_host'], port =  
+            data['mqtt_port'])
             self.loop_until_connected()
 
 
@@ -155,5 +160,5 @@ class MyThing(MQTTLocust):
     createTemplateAndDevice()
 
     task_set = IotDevice
-    min_wait = 10000 # 10 segs
-    max_wait = 50000 # 50 segs
+    min_wait = 2000 # 10 segs
+    max_wait = 4000 # 50 segs

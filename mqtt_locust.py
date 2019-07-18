@@ -178,8 +178,10 @@ class MQTTClient(mqtt.Client):
             name="5. Connection time: between 3 and 8 s"
         if (delta >= 8000 and delta < 15000 ):
             name="6. Connection time: between 8 and 15 s"
-        if (delta >= 15000):
-            name="7. Connection time: higher then 15 s"
+        if (delta >= 15000 and delta < 30000 ):
+            name="6. Connection time: between 15 and 30 s"
+        if (delta >= 30000):
+            name="7. Connection time: higher then 30 s"
 
         fire_locust_success(
             request_type=REQUEST_TYPE,
@@ -192,10 +194,10 @@ class MQTTClient(mqtt.Client):
         
 
     def warning_timeout(self):
-        print("Warning: More than 15 seconds to connect.")        
+        print("Warning: More than 30 seconds to connect.")        
         fire_locust_failure(
             request_type=REQUEST_TYPE,
-            name='Warning: More than 15 seconds to connect.',
+            name='Warning: More than 30 seconds to connect.',
             response_time=0,
             exception=None
         )
