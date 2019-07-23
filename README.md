@@ -9,7 +9,7 @@ For more details, read this article: https://www.concurrencylabs.com/blog/hatch-
 # Installation
 
 ```shell
-virtualenv mqtt-locust
+virtualenv dojot-mqtt-locust
 pip install -r requirements.txt
 ```
 
@@ -19,6 +19,11 @@ pip install -r requirements.txt
  source bin/activate
  locust -f iot-publish.py -H localhost:1883
 ```
+or
+```
+ python3 -m locust.main  -f iot-publish.py -H localhost:1883
+```
+
 
  or without GUI
 ```shell

@@ -27,16 +27,23 @@ data['mqtt_host'] = "10.50.11.160"
 data['mqtt_port'] = "30002"
 
 #Anderson
-data['mqtt_host'] = "10.202.70.18"
+#data['mqtt_host'] = "10.202.70.18"
+#data['mqtt_port'] = "1883"
+
+#iotmid-docekr
+data['dojot_host'] = "10.4.2.28"
+data['dojot_port'] = "8000"
+data['mqtt_host'] = "10.4.2.28"
 data['mqtt_port'] = "1883"
 
-#data['dojot_host'] = "10.4.2.28"
-#data['dojot_port'] = "8000"
-#data['mqtt_host'] = "10.4.2.28"
-#data['mqtt_port'] = "1883"
-
+#joab
 #data['mqtt_host'] = "10.202.70.99"
 #data['mqtt_port'] = "1883"
+
+#me
+#data['mqtt_host'] = 'localhost'
+#data['mqtt_port'] = '1883'
+
 
 
 #topic
@@ -160,5 +167,5 @@ class MyThing(MQTTLocust):
     createTemplateAndDevice()
 
     task_set = IotDevice
-    min_wait = 2000 # 10 segs
-    max_wait = 4000 # 50 segs
+    min_wait = 10000 # 10 segs
+    max_wait = 10000 # 10 segs
