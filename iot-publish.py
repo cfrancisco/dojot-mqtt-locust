@@ -31,10 +31,10 @@ data['mqtt_port'] = "30002"
 #data['mqtt_port'] = "1883"
 
 #iotmid-docekr
-data['dojot_host'] = "10.4.2.28"
-data['dojot_port'] = "8000"
-data['mqtt_host'] = "10.4.2.28"
-data['mqtt_port'] = "1883"
+#data['dojot_host'] = "10.4.2.28"
+#data['dojot_port'] = "8000"
+#data['mqtt_host'] = "10.4.2.28"
+#data['mqtt_port'] = "1883"
 
 #joab
 #data['mqtt_host'] = "10.202.70.99"

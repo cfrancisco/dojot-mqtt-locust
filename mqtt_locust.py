@@ -57,11 +57,9 @@ class MQTTClient(mqtt.Client):
     def __init__(self, *args, **kwargs):
         super(MQTTClient, self).__init__(*args, **kwargs)
         self.on_publish = self.locust_on_publish
-        self.on_subscribe = self.locust_on_subscribe
         self.on_disconnect = self.locust_on_disconnect
         self.on_connect = self.locust_on_connect
         self.pubmmap = {}
-        self.submmap = {}
         self.defaultQoS = 0
         self.is_connected = False
 
@@ -85,9 +83,9 @@ class MQTTClient(mqtt.Client):
 
     def disconnecting(self):
         print ("Disconnecting")
-        super(MQTTClient, self).disconnect() # disconnect gracefully
-        super(MQTTClient, self).loop_stop() # stops network loop
         self.is_connected = False
+        super(MQTTClient, self).loop_stop() # stops network loop
+        super(MQTTClient, self).disconnect() # disconnect gracefully
 
     def reconnecting(self,host, port):
         print ("Reconnecting")
@@ -103,7 +101,6 @@ class MQTTClient(mqtt.Client):
 
 
     def publish(self, topic, payload=None, qos=0, retry=5, name='publish', **kwargs):
-        #print ("publishing", self.is_connected)
         timeout = kwargs.pop('timeout', 10000)
         start_time = time.time()
         try:
@@ -137,32 +134,7 @@ class MQTTClient(mqtt.Client):
           print (str(e))
 
 
-    #retry is not used at the time since this implementation only supports QoS 0
-    def subscribe(self, topic, qos=0, retry=5, name='subscribe', timeout=15000):
-        #print ("subscribing to topic:["+topic+"]")
-        start_time = time.time()
-        try:
-            err, mid = super(MQTTClient, self).subscribe(
-                  topic,
-                  qos=qos
-            )
-            self.submmap[mid] = Message(
-                    MESSAGE_TYPE_SUB, qos, topic, "", start_time, timeout, name
-                      )
-            if err:
-              raise ValueError(err)
-              print ("Subscribed to topic with err:["+str(err)+"]messageId:["+str(mid)+"]")
-        except Exception as e:
-          total_time = time_delta(start_time, time.time())
-          fire_locust_failure(
-                  request_type=REQUEST_TYPE,
-                  name=name,
-                  response_time=total_time,
-                  exception=e,
-          )
-          print ("Exception when subscribing to topic:["+str(e)+"]")
-        
-
+ 
     def connection_time(self,initial, final):
         delta = time_delta(initial,final)
         name = ""
@@ -192,6 +164,15 @@ class MQTTClient(mqtt.Client):
      
         pass
         
+
+    def warning_connection_down(self):
+        print("Warning: Trying publish without connection..")        
+        fire_locust_failure(
+            request_type=REQUEST_TYPE,
+            name='No conection. Trying to reconnect.',
+            response_time=0,
+            exception=None
+        )
 
     def warning_timeout(self):
         print("Warning: More than 30 seconds to connect.")        
@@ -275,31 +256,6 @@ class MQTTClient(mqtt.Client):
           #print("report publish success - response_time:["+str(total_time)+"]")
 
 
-    def locust_on_subscribe(self, client, userdata, mid, granted_qos):
-        end_time = time.time()
-        message = self.submmap.pop(mid, None)
-        if message is None:
-            print ("did not find message for on_subscribe")
-            return
-        total_time = time_delta(message.start_time, end_time)
-        if message.timed_out(total_time):
-            fire_locust_failure(
-                request_type=REQUEST_TYPE,
-                name=message.name,
-                response_time=total_time,
-                exception=TimeoutError("subscribe timed out"),
-            )
-            print("report subscribe failure - response_time:["+str(total_time)+"]")
-        else:
-            fire_locust_success(
-                request_type=REQUEST_TYPE,
-                name=message.name,
-                response_time=total_time,
-                response_length=0,
-            )
-            print("report subscribe success - response_time:["+str(total_time)+"]")
-        
-
     def locust_on_disconnect(self, client, userdata, rc):
         print("locust_on_disconnect, RC: ", rc)
         if (self.is_connected):
@@ -324,12 +280,7 @@ class MQTTLocust(Locust):
     def __init__(self, *args, **kwargs):
         print("initializing MQTTLocust")
         super(Locust, self).__init__(*args, **kwargs)
-
-        #TODO: Current implementation sets an empty client_id when the connection is initialized,
-        #      which Paho handles by creating a random client_id. 
-        #		Ideally we want to control the client_id that is set in Paho. Each client_id
-        #		should match a thing_id in the AWS IoT Thing Registry
-        self.client_id = "{0}-{1}-{2}".format("locust", random.randint(1,111233),random.randint(1,111233))
+        self.client_id = "{0}-{1}-{2}".format("locust", random.randint(1,10000),random.randint(1,10000))
         self.client = MQTTClient(self.client_id)
 
         # try:

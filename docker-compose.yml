@@ -2,8 +2,8 @@ version: '3'
 services:
   locust-master:
     build: .
-    #command: locust -f iot-publish.py -H 10.50.11.160:30002 --master
-    command: locust -f iot-publish.py -H 10.4.2.28:1883 --master
+    command: locust -f iot-publish.py -H 10.50.11.160:30002 --master
+    #command: locust -f iot-publish.py -H 10.4.2.28:1883 --master
     volumes: 
       - .:/usr/src/app
     ports:
