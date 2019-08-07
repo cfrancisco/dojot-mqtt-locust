@@ -21,10 +21,20 @@ logger.setLevel(logging.DEBUG)
 # default data
 data = dict()
 
-data['dojot_host'] = "10.50.11.155"
-data['dojot_port'] = "30001"
-data['mqtt_host'] = "10.50.11.160"
-data['mqtt_port'] = "30002"
+data['device_id'] = "2a2s2e1"
+#data['dojot_host'] = "10.50.11.155"
+#data['dojot_port'] = "30001"
+data['dojot_host'] = "10.4.2.28"
+data['dojot_port'] = "8000"
+
+co = dict()
+ct = dict()
+co['host'] = "10.50.11.16"
+co['port'] = "30002"
+ct['host'] = "10.4.2.28"
+ct['port'] = "1883"
+
+data['host_availables'] = [co, ct]
 
 #Anderson
 #data['mqtt_host'] = "10.202.70.18"
@@ -35,15 +45,6 @@ data['mqtt_port'] = "30002"
 #data['dojot_port'] = "8000"
 #data['mqtt_host'] = "10.4.2.28"
 #data['mqtt_port'] = "1883"
-
-#joab
-#data['mqtt_host'] = "10.202.70.99"
-#data['mqtt_port'] = "1883"
-
-#me
-#data['mqtt_host'] = 'localhost'
-#data['mqtt_port'] = '1883'
-
 
 
 #topic
@@ -103,9 +104,15 @@ class IotDevice(TaskSet):
 
         def on_start(self):
             print("Starting SubTask....")
-            self.client.connecting(host = data['mqtt_host'], port =  
-            data['mqtt_port'])
+            self.last_connected_host = data['host_availables'][0]['host'] 
+            self.last_connected_port = data['host_availables'][0]['port'] 
+            self.client.connecting(host = self.last_connected_host, port = self.last_connected_port)
             self.loop_until_connected()
+
+        def changeHost(self):
+            self.last_connected_host = data['host_availables'][1]['host'] 
+            self.last_connected_port = data['host_availables'][1]['port'] 
+            print("Changing to second host: ", self.last_connected_host,self.last_connected_port)
 
 
         @task
@@ -113,7 +120,8 @@ class IotDevice(TaskSet):
             #print ("publish task called")
             if not self.client.is_connected:
                 print ("Connection is down. ")
-                self.client.reconnecting(host = data['mqtt_host'], port =  data['mqtt_port'])
+                self.changeHost()
+                self.client.reconnecting(host = self.last_connected_host, port = self.last_connected_port)
                 self.loop_until_connected()
                 #self.interrupt()
                 return False
@@ -140,7 +148,7 @@ class IotDevice(TaskSet):
 def createTemplateAndDevice():
     # do login
     auth_header = do_login(False, data['dojot_host'], user, password, data['dojot_port'])
-    # now, let's create the template
+    # create the template and the device used in all requests
     data['device_id'] = create_template_and_device(auth_header,
                                 False,
                                 data['dojot_host'],
@@ -164,7 +172,7 @@ class MyThing(MQTTLocust):
     # time. Thus, for now, the host and port were hard coded.
     #getParms()
 
-    createTemplateAndDevice()
+    #createTemplateAndDevice()
 
     task_set = IotDevice
     min_wait = 10000 # 10 segs
