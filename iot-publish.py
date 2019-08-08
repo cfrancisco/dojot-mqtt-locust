@@ -10,7 +10,7 @@ import sys
 
 from locust import TaskSet, task
 from dojot_devices import (do_login, create_devices, create_template_and_device)
-from mqtt_locust import MQTTLocust
+from mqtt_locust import MQTTLocust, MQTTClient
 import random
 import resource
 
@@ -28,24 +28,13 @@ data['dojot_host'] = "10.4.2.28"
 data['dojot_port'] = "8000"
 
 co = dict()
-ct = dict()
-co['host'] = "10.50.11.16"
+co['host'] = "10.50.11.160"
 co['port'] = "30002"
+ct = dict()
 ct['host'] = "10.4.2.28"
 ct['port'] = "1883"
 
-data['host_availables'] = [co, ct]
-
-#Anderson
-#data['mqtt_host'] = "10.202.70.18"
-#data['mqtt_port'] = "1883"
-
-#iotmid-docekr
-#data['dojot_host'] = "10.4.2.28"
-#data['dojot_port'] = "8000"
-#data['mqtt_host'] = "10.4.2.28"
-#data['mqtt_port'] = "1883"
-
+data['host_availables'] = [ct, co]
 
 #topic
 tenant = "admin"
@@ -61,15 +50,13 @@ prefix = 'locust'
 
 class IotDevice(TaskSet):
 
-    # def on_start(self):
+    #def on_start(self):
     #     print ("Creating Device.")
-
     #     # do login
     #     auth_header = do_login(secure, data['dojot_host'], user, password, data['dojot_port'])
-        
     #     # create devices
     #     self.devices_available = []
-    #     aux_prefix = self.client.client_id 
+    #     aux_prefix = self.clnt.clnt_id 
     #     self.devices_available = create_devices(auth_header,
     #                             data['template_id'],
     #                             secure,
@@ -78,58 +65,68 @@ class IotDevice(TaskSet):
     #                             aux_prefix,
     #                             data['dojot_port'])
     #     time.sleep(4)
-            
 
     def on_stop(self):
-        if self.client.is_connected:
+        if self.clnt.is_connected:
             print ("Client is connected so let's disconnect the tasks")
-            self.client.disconnecting()
+            self.clnt.disconnecting()
         pass
 
     @task
     class SubDevice(TaskSet):
 
         def loop_until_connected(self):
-            #print("Starting loop.")
             attempts = 0
-            while (attempts < 30):
-              if (not self.client.is_connected):
+            while (attempts < 20):
+              if (not self.clnt.is_connected):
                 time.sleep(1)
                 attempts+=1
               else:
                 break
             print("Finished loop with {} attempts.".format(attempts))
-            if (attempts == 30):
-                self.client.warning_timeout()
+            #if (attempts == 20):
+            #    self.clnt.warning_timeout()
 
         def on_start(self):
             print("Starting SubTask....")
-            self.last_connected_host = data['host_availables'][0]['host'] 
-            self.last_connected_port = data['host_availables'][0]['port'] 
-            self.client.connecting(host = self.last_connected_host, port = self.last_connected_port)
-            self.loop_until_connected()
+            self.current_host = 0
+            self.getHost(self.current_host)
+            self.create_and_connect()
+        
+        def getHost(self, index):
+            self.last_connected_host = data['host_availables'][index]['host'] 
+            self.last_connected_port = data['host_availables'][index]['port'] 
 
+                
         def changeHost(self):
-            self.last_connected_host = data['host_availables'][1]['host'] 
-            self.last_connected_port = data['host_availables'][1]['port'] 
-            print("Changing to second host: ", self.last_connected_host,self.last_connected_port)
+            self.current_host = self.current_host+1
+            if (self.current_host >= len(data['host_availables'])):
+                self.current_host = 0
+            self.getHost(self.current_host)
+            print("Changing to host: "+self.last_connected_host)
 
+        def create_and_connect(self):
+            # creating new client
+            self.clnt_id = "{0}-{1}-{2}".format("locust", random.randint(1,10000),random.randint(1,10000))
+            self.clnt = MQTTClient(self.clnt_id)
+            self.clnt.connecting(host = self.last_connected_host, port = self.last_connected_port)
+            self.loop_until_connected()
 
         @task
         def publish(self):
             #print ("publish task called")
-            if not self.client.is_connected:
-                print ("Connection is down. ")
+            if not self.clnt.is_connected:
                 self.changeHost()
-                self.client.reconnecting(host = self.last_connected_host, port = self.last_connected_port)
-                self.loop_until_connected()
+                # disconnect the old client
+                self.clnt.disconnecting()
+                # creating new client
+                self.clnt = None
+                self.create_and_connect()
                 #self.interrupt()
                 return False
-            #device_id = random.choice(self.devices_available)
-            #device_id = self.parent.devices_available[0]
             device_id = data['device_id']
             topic = "/{0}/{1}/attrs".format(tenant, device_id)
-            self.client.publish(
+            self.clnt.publish(
                 topic=topic,
                 payload=self.payload(),
                 qos=0,

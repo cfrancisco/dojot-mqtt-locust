@@ -6,6 +6,7 @@ import ssl
 import paho.mqtt.client as mqtt
 from locust import Locust, task, TaskSet, events
 
+REQUEST_PYTHON = 'PYTHON'
 REQUEST_TYPE = 'MQTT'
 MESSAGE_TYPE_PUB = 'PUB'
 MESSAGE_TYPE_SUB = 'SUB'
@@ -62,6 +63,12 @@ class MQTTClient(mqtt.Client):
         self.pubmmap = {}
         self.defaultQoS = 0
         self.is_connected = False
+        fire_locust_success(
+            request_type=REQUEST_PYTHON,
+            name='MQTT Client created.',
+            response_time=0,
+            response_length=0
+        )
 
 
     def connecting(self, host, port):
@@ -82,10 +89,17 @@ class MQTTClient(mqtt.Client):
             )
 
     def disconnecting(self):
-        print ("Disconnecting")
+        print ("Closing")
         self.is_connected = False
         super(MQTTClient, self).loop_stop() # stops network loop
         super(MQTTClient, self).disconnect() # disconnect gracefully
+        fire_locust_failure(
+            request_type=REQUEST_TYPE,
+            name="Closing",
+            response_time=0,
+            exception=ConnectError("Connection timeout or lost. Closing connection and removing MQTT client. ")
+        )
+ 
 
     def reconnecting(self,host, port):
         print ("Reconnecting")
@@ -96,9 +110,9 @@ class MQTTClient(mqtt.Client):
             request_type=REQUEST_TYPE,
             name="reconnecting",
             response_time=time_delta(start_time, time.time()),
-            exception=DisconnectError("Connection is down. Trying to reconnect.")
+            exception=DisconnectError("Connection lost or timeout. Trying to connect to host:["+host+"]")
         )
-
+ 
 
     def publish(self, topic, payload=None, qos=0, retry=5, name='publish', **kwargs):
         timeout = kwargs.pop('timeout', 10000)
@@ -150,10 +164,10 @@ class MQTTClient(mqtt.Client):
             name="5. Connection time: between 3 and 8 s"
         if (delta >= 8000 and delta < 15000 ):
             name="6. Connection time: between 8 and 15 s"
-        if (delta >= 15000 and delta < 30000 ):
-            name="6. Connection time: between 15 and 30 s"
-        if (delta >= 30000):
-            name="7. Connection time: higher then 30 s"
+        if (delta >= 15000 and delta < 20000 ):
+            name="6. Connection time: between 15 and 20 s"
+        if (delta >= 20000):
+            name="7. Connection time: higher then 20 s"
 
         fire_locust_success(
             request_type=REQUEST_TYPE,
@@ -175,10 +189,10 @@ class MQTTClient(mqtt.Client):
         )
 
     def warning_timeout(self):
-        print("Warning: More than 30 seconds to connect.")        
+        print("Warning: More than 20 seconds to connect.")        
         fire_locust_failure(
             request_type=REQUEST_TYPE,
-            name='Warning: More than 30 seconds to connect.',
+            name='Warning: More than 20 seconds to connect.',
             response_time=0,
             exception=None
         )
@@ -279,17 +293,9 @@ class MQTTLocust(Locust):
 
     def __init__(self, *args, **kwargs):
         print("initializing MQTTLocust")
+        # TODO update args to receive hosts passed by config files
         super(Locust, self).__init__(*args, **kwargs)
-        self.client_id = "{0}-{1}-{2}".format("locust", random.randint(1,10000),random.randint(1,10000))
-        self.client = MQTTClient(self.client_id)
-
         # try:
         #     [host, port] = self.host.split(":")
         # except:
         #     host, port = self.host, 1883
-        # port = int(port)
-        # # set data
-        # self.client.client_id = self.client_id
-        # self.client.host = host
-        # self.client.port = port 
-        
