@@ -34,7 +34,7 @@ ct = dict()
 ct['host'] = "10.4.2.28"
 ct['port'] = "1883"
 
-data['host_availables'] = [ct, co]
+data['host_availables'] = [ct, ct]
 
 #topic
 tenant = "admin"
@@ -117,7 +117,7 @@ class IotDevice(TaskSet):
             #print ("publish task called")
             if not self.clnt.is_connected:
                 self.changeHost()
-                # disconnect the old client
+                # disconnect the old host
                 self.clnt.disconnecting()
                 # creating new client
                 self.clnt = None

@@ -83,7 +83,7 @@ class MQTTClient(mqtt.Client):
         except Exception as e:
             fire_locust_failure(
                 request_type=REQUEST_TYPE,
-                name='connect',
+                name='Connection',
                 response_time=time_delta(self.start_time, time.time()),
                 exception=ConnectError("Could not connect to host:["+host+"]")
             )
@@ -206,7 +206,7 @@ class MQTTClient(mqtt.Client):
         try:
           fire_locust_success(
             request_type=REQUEST_TYPE,
-            name='connect',
+            name='Connection',
             response_time=0,
             response_length=0
             )
@@ -216,7 +216,7 @@ class MQTTClient(mqtt.Client):
           print(e)
           fire_locust_failure(
             request_type=REQUEST_TYPE,
-            name='connect',
+            name='Connection',
             response_time=0,
             exception=e
             )
@@ -281,7 +281,7 @@ class MQTTClient(mqtt.Client):
         
         fire_locust_failure(
             request_type=REQUEST_TYPE,
-            name='disconnect',
+            name='Disconnected',
             response_time=0,
             exception=DisconnectError("disconnected"),
         )
